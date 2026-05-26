@@ -1,0 +1,57 @@
+name: hermes-napcat
+label: NapCat QQ
+kind: platform
+version: 0.1.0
+description: >
+  Hermes Agent platform adapter for QQ via NapCat's OneBot v11 HTTP and
+  WebSocket gateway.
+author: local
+optional_env:
+  - name: NAPCAT_WS_URL
+    description: "NapCat OneBot forward WebSocket URL, for example ws://127.0.0.1:3001"
+    prompt: "NapCat WebSocket URL"
+    password: false
+  - name: NAPCAT_HTTP_URL
+    description: "NapCat OneBot HTTP base URL, used as fallback for outbound messages"
+    prompt: "NapCat HTTP URL"
+    password: false
+  - name: NAPCAT_ACCESS_TOKEN
+    description: "OneBot access token configured in NapCat"
+    prompt: "NapCat access token"
+    password: true
+  - name: NAPCAT_MODE
+    description: "Connection mode: forward or reverse"
+    prompt: "Connection mode"
+    password: false
+  - name: NAPCAT_REVERSE_HOST
+    description: "Host for Hermes to listen on in reverse WebSocket mode"
+    prompt: "Reverse WebSocket host"
+    password: false
+  - name: NAPCAT_REVERSE_PORT
+    description: "Port for Hermes to listen on in reverse WebSocket mode"
+    prompt: "Reverse WebSocket port"
+    password: false
+  - name: NAPCAT_REVERSE_PATH
+    description: "Path for Hermes to listen on in reverse WebSocket mode"
+    prompt: "Reverse WebSocket path"
+    password: false
+  - name: NAPCAT_SELF_ID
+    description: "QQ number used by NapCat; used to ignore self messages and detect group mentions"
+    prompt: "Bot QQ number"
+    password: false
+  - name: NAPCAT_ALLOWED_USERS
+    description: "Comma-separated QQ user IDs allowed to talk to Hermes"
+    prompt: "Allowed QQ users"
+    password: false
+  - name: NAPCAT_ALLOW_ALL_USERS
+    description: "Allow any QQ user to talk to Hermes"
+    prompt: "Allow all QQ users? (true/false)"
+    password: false
+  - name: NAPCAT_HOME_CHANNEL
+    description: "Default target for cron/send_message, for example group:123456 or private:10001"
+    prompt: "Home channel"
+    password: false
+  - name: NAPCAT_HOME_CHANNEL_NAME
+    description: "Display name for the NapCat home channel"
+    prompt: "Home channel name"
+    password: false
