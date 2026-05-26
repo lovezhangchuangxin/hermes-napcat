@@ -96,15 +96,35 @@ docker run -d \
   mlikiowa/napcat-docker:latest
 ```
 
-端口用途：
+NapCat Docker 端口用途：
 
 - `6099`：NapCat WebUI，浏览器访问 `http://服务器IP:6099/webui`。
 - `3000`：OneBot HTTP API，Hermes 的 `http_url` 通常填 `http://127.0.0.1:3000`。
 - `3001`：OneBot WebSocket，正向模式下 Hermes 的 `ws_url` 通常填 `ws://127.0.0.1:3001`。
 
-如果 Hermes 和 NapCat 在同一台服务器上，并且 Hermes 直接跑在宿主机上，Hermes 配置里通常可以使用
-`127.0.0.1`。如果 Hermes 在另一个容器或另一台机器上，请改成对 Hermes 可达的地址，例如宿主机
-IP、Docker Compose 服务名或内网域名。
+注意：`6099` 是 NapCat WebUI 端口，不要再拿它作为 Hermes 反向 WebSocket 监听端口。
+下面的反向 WebSocket 示例使用 `8765`。
+
+### Docker 场景地址怎么填
+
+如果 Hermes 直接跑在宿主机上、NapCat 跑在 Docker 里：
+
+- 正向 WebSocket 模式：Hermes 主动连 NapCat，Hermes 配置里可以用 `127.0.0.1`，因为 NapCat 端口映射到了宿主机。
+- 反向 WebSocket 模式：NapCat 容器主动连 Hermes，NapCat 里不能填 `127.0.0.1`，因为那指的是容器自己。Hermes 应监听 `0.0.0.0`，NapCat 里填宿主机内网 IP。
+
+查看宿主机内网 IP：
+
+```bash
+hostname -I
+```
+
+这时 NapCat 反向 WebSocket 地址填：
+
+```text
+ws://10.5.0.12:8765/onebot/v11/ws
+```
+
+如果 Hermes 和 NapCat 都跑宿主机，反向 WebSocket 可以用 `127.0.0.1`。如果 Hermes 在另一台机器或另一个容器，请填 NapCat 能访问到的 Hermes 地址，例如服务器内网 IP、Docker Compose 服务名或内网域名。
 
 安全建议：
 
@@ -154,8 +174,8 @@ plugins:
 napcat:
   enabled: true
   mode: reverse
-  reverse_host: "127.0.0.1"          # 必填：Hermes 监听地址
-  reverse_port: 6099                 # 必填：Hermes 监听端口
+  reverse_host: "0.0.0.0"            # 必填：Docker NapCat 要连宿主机 Hermes 时用 0.0.0.0
+  reverse_port: 8765                 # 必填：Hermes 监听端口，不要和 NapCat WebUI 的 6099 冲突
   reverse_path: "/onebot/v11/ws"     # 必填：Hermes WebSocket 路径
   http_url: "http://127.0.0.1:3000"  # 推荐：NapCat HTTP 地址
   access_token: ""                   # 如果 NapCat 配了 token，这里填同一个
@@ -166,13 +186,42 @@ napcat:
 然后把 NapCat 的反向 WebSocket 地址设置为 Hermes 的监听地址：
 
 ```text
-ws://127.0.0.1:6099/onebot/v11/ws
+ws://宿主机内网IP:8765/onebot/v11/ws
 ```
 
 NapCat 侧需要开启：
 
 - 反向 WebSocket：必需，地址填上面的 `ws://...`。
 - HTTP：推荐，用于 cron、`send_message` 等独立发送场景。
+
+如果 `hostname -I` 输出 `10.5.0.12 172.17.0.1 172.18.0.1`，通常填：
+
+```text
+ws://10.5.0.12:8765/onebot/v11/ws
+```
+
+### 反向 WebSocket 401 排查
+
+如果 NapCat 日志里出现：
+
+```text
+Unexpected server response: 401
+```
+
+说明 Hermes 拒绝了 NapCat 的反向 WebSocket 连接。最常见原因是 Hermes 配置了
+`access_token` 或 `NAPCAT_ACCESS_TOKEN`，但 NapCat 的反向 WebSocket 客户端没有带同一个 token。
+
+处理方式二选一：
+
+1. 在 NapCat 的反向 WebSocket 客户端配置里填写同一个 access token。
+2. 或者把 token 放到反向 WebSocket URL 查询参数里：
+
+```text
+ws://10.5.0.12:8765/onebot/v11/ws?access_token=your-token
+```
+
+本地临时测试也可以不启用 token：删除或注释 `~/.hermes/.env` 里的
+`NAPCAT_ACCESS_TOKEN`，并把 `config.yaml` 里的 `napcat.access_token` 留空，然后重启 Hermes gateway。
 
 ## 用户授权
 
@@ -233,7 +282,28 @@ napcat:
 
 ## Home Channel
 
-建议使用带前缀的 chat ID，避免私聊和群聊 ID 歧义：
+Home Channel 是 Hermes 用来发送 cron 结果、跨平台消息和部分系统通知的默认目标。
+如果没有配置，Hermes 在首次会话时会发送一条类似
+`No home channel is set for Napcat` 的提示。这不是 NapCat 报错。
+
+最简单的方式是在你希望作为默认目标的 QQ 私聊或群聊里发送：
+
+```text
+/sethome
+```
+
+也可以手动配置。建议使用带前缀的 chat ID，避免私聊和群聊 ID 歧义。
+
+私聊示例：
+
+```yaml
+napcat:
+  home_channel:
+    chat_id: "private:2911331070"
+    name: "QQ DM"
+```
+
+群聊示例：
 
 ```yaml
 napcat:
@@ -247,6 +317,12 @@ napcat:
 ```bash
 NAPCAT_HOME_CHANNEL=group:123456
 NAPCAT_HOME_CHANNEL_NAME="QQ Home"
+```
+
+配置完成后重启 Hermes gateway：
+
+```bash
+hermes gateway restart
 ```
 
 ## 验证

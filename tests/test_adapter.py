@@ -31,7 +31,12 @@ def _make_adapter(extra=None):
 
 class AdapterHelpersTest(unittest.TestCase):
     def tearDown(self):
-        for key in ("NAPCAT_ALLOWED_USERS", "NAPCAT_ALLOW_ALL_USERS"):
+        for key in (
+            "NAPCAT_ALLOWED_USERS",
+            "NAPCAT_ALLOW_ALL_USERS",
+            "NAPCAT_HOME_CHANNEL",
+            "NAPCAT_HOME_CHANNEL_NAME",
+        ):
             os.environ.pop(key, None)
 
     def test_chat_id_normalization(self):
@@ -88,6 +93,22 @@ class AdapterHelpersTest(unittest.TestCase):
         self.assertEqual(os.environ["NAPCAT_ALLOW_ALL_USERS"], "false")
         self.assertEqual(seeded["allow_from"], ["10001", "10002"])
         self.assertFalse(seeded["allow_all_users"])
+
+    def test_yaml_home_channel_bridges_to_env(self):
+        seeded = adapter._apply_yaml_config(
+            {},
+            {
+                "home_channel": {
+                    "chat_id": "2911331070",
+                    "type": "private",
+                    "name": "QQ DM",
+                },
+            },
+        )
+
+        self.assertEqual(os.environ["NAPCAT_HOME_CHANNEL"], "private:2911331070")
+        self.assertEqual(os.environ["NAPCAT_HOME_CHANNEL_NAME"], "QQ DM")
+        self.assertEqual(seeded["home_channel"]["chat_id"], "private:2911331070")
 
 
 class AdapterSendTest(unittest.IsolatedAsyncioTestCase):

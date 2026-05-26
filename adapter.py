@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 PLATFORM_NAME = "napcat"
 MAX_MESSAGE_LENGTH = 4500
 DEFAULT_REVERSE_HOST = "127.0.0.1"
-DEFAULT_REVERSE_PORT = 6099
+DEFAULT_REVERSE_PORT = 8765
 DEFAULT_REVERSE_PATH = "/onebot/v11/ws"
 DEFAULT_ACTION_TIMEOUT = 30.0
 DEFAULT_RECONNECT_BASE = 2.0
@@ -1023,8 +1023,13 @@ def _apply_yaml_config(yaml_cfg: dict, napcat_cfg: dict) -> dict[str, Any] | Non
             name = napcat_cfg.get("home_channel_name") or "NapCat Home"
             default_kind = napcat_cfg.get("home_channel_type") or "group"
         if raw_chat_id:
+            normalized_chat_id = _normalize_chat_id(raw_chat_id, default_kind=str(default_kind))
+            if not os.getenv("NAPCAT_HOME_CHANNEL"):
+                os.environ["NAPCAT_HOME_CHANNEL"] = normalized_chat_id
+            if not os.getenv("NAPCAT_HOME_CHANNEL_NAME"):
+                os.environ["NAPCAT_HOME_CHANNEL_NAME"] = str(name)
             seeded["home_channel"] = {
-                "chat_id": _normalize_chat_id(raw_chat_id, default_kind=str(default_kind)),
+                "chat_id": normalized_chat_id,
                 "name": str(name),
             }
     return seeded or None
