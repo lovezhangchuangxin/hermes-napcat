@@ -30,6 +30,10 @@ def _make_adapter(extra=None):
 
 
 class AdapterHelpersTest(unittest.TestCase):
+    def tearDown(self):
+        for key in ("NAPCAT_ALLOWED_USERS", "NAPCAT_ALLOW_ALL_USERS"):
+            os.environ.pop(key, None)
+
     def test_chat_id_normalization(self):
         self.assertEqual(adapter._normalize_chat_id("123"), "group:123")
         self.assertEqual(adapter._normalize_chat_id("123", default_kind="private"), "private:123")
@@ -70,6 +74,20 @@ class AdapterHelpersTest(unittest.TestCase):
         self.assertEqual(parsed["reply_to_message_id"], "7")
         self.assertEqual(parsed["text"], "ping")
         self.assertEqual(parsed["media_urls"], [])
+
+    def test_yaml_auth_config_bridges_to_env(self):
+        seeded = adapter._apply_yaml_config(
+            {},
+            {
+                "allow_from": ["10001", "10002"],
+                "allow_all_users": False,
+            },
+        )
+
+        self.assertEqual(os.environ["NAPCAT_ALLOWED_USERS"], "10001,10002")
+        self.assertEqual(os.environ["NAPCAT_ALLOW_ALL_USERS"], "false")
+        self.assertEqual(seeded["allow_from"], ["10001", "10002"])
+        self.assertFalse(seeded["allow_all_users"])
 
 
 class AdapterSendTest(unittest.IsolatedAsyncioTestCase):

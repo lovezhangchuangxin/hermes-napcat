@@ -178,15 +178,30 @@ NapCat 侧需要开启：
 
 Hermes gateway 的用户授权仍然生效。本地初次测试可以临时使用：
 
-```bash
-NAPCAT_ALLOW_ALL_USERS=true
+```yaml
+napcat:
+  allow_all_users: true
 ```
 
 正式使用建议配置允许访问 Hermes 的 QQ 号：
 
+```yaml
+napcat:
+  allow_from:
+    - "10001"
+    - "10002"
+```
+
+`allow_from` 里填的是 QQ 用户 ID。它同时适用于私聊和群聊里的发送者授权。
+
+也可以用环境变量配置，适合放在 `~/.hermes/.env`：
+
 ```bash
+NAPCAT_ALLOW_ALL_USERS=true
 NAPCAT_ALLOWED_USERS=10001,10002
 ```
+
+如果同时配置了环境变量和 `config.yaml`，环境变量优先。
 
 ## 群聊行为
 

@@ -994,6 +994,10 @@ def _apply_yaml_config(yaml_cfg: dict, napcat_cfg: dict) -> dict[str, Any] | Non
         "mention_patterns": "NAPCAT_MENTION_PATTERNS",
         "bot_names": "NAPCAT_BOT_NAMES",
         "default_target_type": "NAPCAT_DEFAULT_TARGET_TYPE",
+        "allow_from": "NAPCAT_ALLOWED_USERS",
+        "allowed_users": "NAPCAT_ALLOWED_USERS",
+        "allow_all_users": "NAPCAT_ALLOW_ALL_USERS",
+        "allow_all": "NAPCAT_ALLOW_ALL_USERS",
     }
     seeded: dict[str, Any] = {}
     for key, env_name in key_to_env.items():
