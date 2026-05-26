@@ -327,6 +327,33 @@ python -m unittest discover -s tests -v
 
 ## 常见问题
 
+### Hermes gateway 如何后台运行
+
+先安装后台服务，再启动：
+
+```bash
+hermes gateway install
+hermes gateway start
+hermes gateway status
+```
+
+之后重启或停止：
+
+```bash
+hermes gateway restart
+hermes gateway stop
+```
+
+如果你在 Linux 上以 system service 方式安装，可以使用：
+
+```bash
+hermes gateway install --system --run-as-user root
+hermes gateway start --system
+hermes gateway status --system
+```
+
+如果 `hermes gateway restart` 仍然占用当前终端，通常是还没有先通过 `hermes gateway install` 成功安装后台服务。
+
 ### `address already in use`
 
 如果 Hermes 启动时报：
