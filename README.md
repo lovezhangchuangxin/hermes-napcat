@@ -73,6 +73,45 @@ NAPCAT_SELF_ID=123456789
 NAPCAT_ALLOWED_USERS=10001,10002
 ```
 
+## 服务器部署推荐 Docker
+
+服务器上推荐用 NapCat Docker。这样宿主机不需要手动安装 QQ 客户端，QQ/NTQQ 和
+NapCat 运行在容器里；Hermes 只需要连接 NapCat 暴露出来的 OneBot HTTP/WebSocket。
+
+你仍然需要一个 QQ 账号登录 NapCat。首次启动后进入 NapCat WebUI 扫码或按页面提示完成登录。
+
+NapCat-Docker 官方项目：https://github.com/NapNeko/NapCat-Docker
+
+最小启动示例：
+
+```bash
+docker run -d \
+  -e NAPCAT_GID=$(id -g) \
+  -e NAPCAT_UID=$(id -u) \
+  -p 3000:3000 \
+  -p 3001:3001 \
+  -p 6099:6099 \
+  --name napcat \
+  --restart=always \
+  mlikiowa/napcat-docker:latest
+```
+
+端口用途：
+
+- `6099`：NapCat WebUI，浏览器访问 `http://服务器IP:6099/webui`。
+- `3000`：OneBot HTTP API，Hermes 的 `http_url` 通常填 `http://127.0.0.1:3000`。
+- `3001`：OneBot WebSocket，正向模式下 Hermes 的 `ws_url` 通常填 `ws://127.0.0.1:3001`。
+
+如果 Hermes 和 NapCat 在同一台服务器上，并且 Hermes 直接跑在宿主机上，Hermes 配置里通常可以使用
+`127.0.0.1`。如果 Hermes 在另一个容器或另一台机器上，请改成对 Hermes 可达的地址，例如宿主机
+IP、Docker Compose 服务名或内网域名。
+
+安全建议：
+
+- 不要把 `6099` WebUI 直接暴露到公网，至少应加防火墙或反向代理鉴权。
+- 首次启动后修改 NapCat WebUI 默认 token。
+- 如果配置了 OneBot access token，Hermes 的 `access_token` 必须和 NapCat 里一致。
+
 ## 正向 WebSocket 模式
 
 正向模式下，Hermes 主动连接 NapCat 的 WebSocket 地址。

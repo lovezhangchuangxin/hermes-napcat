@@ -38,3 +38,10 @@ config.local.yml
 .vscode/
 *.swp
 *.swo
+
+# Agent-specific
+.claude
+.codex
+.worktrees
+.omc
+.playwright-mcp
