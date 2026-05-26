@@ -20,9 +20,11 @@ Hermes 核心代码。
 Hermes 会从 `~/.hermes/plugins/<插件名>/` 加载用户插件，用户插件需要在
 Hermes 配置里显式启用。
 
+推荐直接把 GitHub 仓库克隆到 Hermes 插件目录：
+
 ```bash
 mkdir -p ~/.hermes/plugins
-ln -s /Users/keqing/Desktop/projects/codes/hermes-napcat ~/.hermes/plugins/hermes-napcat
+git clone https://github.com/lovezhangchuangxin/hermes-napcat.git ~/.hermes/plugins/hermes-napcat
 hermes plugins enable hermes-napcat
 ```
 
@@ -35,28 +37,50 @@ plugins:
     - hermes-napcat
 ```
 
-## 正向 WebSocket 模式
+更新插件：
 
-先在 NapCat 中开启 OneBot HTTP 和正向 WebSocket，然后配置 Hermes：
-
-```yaml
-plugins:
-  enabled:
-    - hermes-napcat
-
-napcat:
-  enabled: true
-  mode: forward
-  ws_url: "ws://127.0.0.1:3001"
-  http_url: "http://127.0.0.1:3000"
-  access_token: ""
-  self_id: "123456789"
-  require_mention: true
+```bash
+git -C ~/.hermes/plugins/hermes-napcat pull
+hermes gateway restart
 ```
 
-`ws_url` 和 `http_url` 请改成你在 NapCat 里配置的实际端口。
+如果你是在本地开发，可以改用软链接：
 
-## 反向 WebSocket 模式
+```bash
+mkdir -p ~/.hermes/plugins
+ln -s /path/to/hermes-napcat ~/.hermes/plugins/hermes-napcat
+hermes plugins enable hermes-napcat
+```
+
+## 配置建议
+
+NapCat 端需要开启 OneBot v11。WebSocket 连接模式只需要选一种：
+
+- `mode: forward`：Hermes 主动连接 NapCat。配置 `ws_url`。
+- `mode: reverse`：Hermes 监听一个 WebSocket 地址，NapCat 主动连接 Hermes。配置 `reverse_host`、`reverse_port`、`reverse_path`。
+
+不要把正向和反向同时接到同一个 Hermes 实例，否则同一条 QQ 消息可能会被处理两次。
+
+`http_url` 不是收消息通道，它只用于发送补充。建议同时开启 NapCat HTTP 并配置
+`http_url`，这样 cron、`send_message`、gateway 外独立发送等场景也能发 QQ 消息。
+
+如果 NapCat 配置了 access token，Hermes 侧也要配置同一个 token。敏感信息建议放在
+`~/.hermes/.env`：
+
+```bash
+NAPCAT_ACCESS_TOKEN=your-token
+NAPCAT_SELF_ID=123456789
+NAPCAT_ALLOWED_USERS=10001,10002
+```
+
+## 正向 WebSocket 模式
+
+正向模式下，Hermes 主动连接 NapCat 的 WebSocket 地址。
+
+NapCat 侧需要开启：
+
+- 正向 WebSocket：必需，用于收消息和网关内发送。
+- HTTP：推荐，用于 cron、`send_message` 等独立发送场景。
 
 Hermes 配置示例：
 
@@ -67,21 +91,49 @@ plugins:
 
 napcat:
   enabled: true
-  mode: reverse
-  reverse_host: "127.0.0.1"
-  reverse_port: 6099
-  reverse_path: "/onebot/v11/ws"
-  http_url: "http://127.0.0.1:3000"
-  access_token: ""
-  self_id: "123456789"
+  mode: forward
+  ws_url: "ws://127.0.0.1:3001"      # 必填：NapCat 正向 WebSocket 地址
+  http_url: "http://127.0.0.1:3000"  # 推荐：NapCat HTTP 地址
+  access_token: ""                   # 如果 NapCat 配了 token，这里填同一个
+  self_id: "123456789"               # 机器人 QQ 号，建议填写
   require_mention: true
 ```
 
-然后把 NapCat 的反向 WebSocket 地址设置为：
+`ws_url` 和 `http_url` 请改成你在 NapCat 里配置的实际地址和端口。
+
+## 反向 WebSocket 模式
+
+反向模式下，Hermes 会启动一个 WebSocket 服务，NapCat 主动连接这个服务。
+
+Hermes 侧需要配置监听地址：
+
+```yaml
+plugins:
+  enabled:
+    - hermes-napcat
+
+napcat:
+  enabled: true
+  mode: reverse
+  reverse_host: "127.0.0.1"          # 必填：Hermes 监听地址
+  reverse_port: 6099                 # 必填：Hermes 监听端口
+  reverse_path: "/onebot/v11/ws"     # 必填：Hermes WebSocket 路径
+  http_url: "http://127.0.0.1:3000"  # 推荐：NapCat HTTP 地址
+  access_token: ""                   # 如果 NapCat 配了 token，这里填同一个
+  self_id: "123456789"               # 机器人 QQ 号，建议填写
+  require_mention: true
+```
+
+然后把 NapCat 的反向 WebSocket 地址设置为 Hermes 的监听地址：
 
 ```text
 ws://127.0.0.1:6099/onebot/v11/ws
 ```
+
+NapCat 侧需要开启：
+
+- 反向 WebSocket：必需，地址填上面的 `ws://...`。
+- HTTP：推荐，用于 cron、`send_message` 等独立发送场景。
 
 ## 用户授权
 
