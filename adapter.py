@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import mimetypes
 import os
 import re
 import time
@@ -150,6 +151,19 @@ def _parse_cq_attrs(raw_attrs: str) -> dict[str, str]:
         key, value = part.split("=", 1)
         attrs[key.strip()] = _unescape_cq(value.strip())
     return attrs
+
+
+def _image_media_type(path: str) -> str:
+    guessed, _ = mimetypes.guess_type(path)
+    if guessed and guessed.startswith("image/"):
+        return guessed
+    return "image/jpeg"
+
+
+def _message_type_from_media(media_types: list[str]) -> MessageType:
+    if any(media_type.startswith("image/") for media_type in media_types):
+        return MessageType.PHOTO
+    return MessageType.TEXT
 
 
 def _auth_headers(token: str) -> dict[str, str]:
@@ -747,7 +761,7 @@ class NapCatAdapter(BasePlatformAdapter):
         )
         event = MessageEvent(
             text=text,
-            message_type=MessageType.TEXT,
+            message_type=_message_type_from_media(media_types),
             source=source,
             raw_message=payload,
             message_id=message_id or None,
@@ -812,7 +826,7 @@ class NapCatAdapter(BasePlatformAdapter):
                 image_path = await self._cache_incoming_image(data)
                 if image_path:
                     media_urls.append(image_path)
-                    media_types.append("image")
+                    media_types.append(_image_media_type(image_path))
             elif seg_type in {"record", "voice"}:
                 parts.append("[voice message]")
             elif seg_type == "video":
@@ -863,7 +877,7 @@ class NapCatAdapter(BasePlatformAdapter):
                 image_path = await self._cache_incoming_image(data)
                 if image_path:
                     media_urls.append(image_path)
-                    media_types.append("image")
+                    media_types.append(_image_media_type(image_path))
             elif seg_type in {"record", "voice"}:
                 parts.append("[voice message]")
             elif seg_type == "video":

@@ -130,6 +130,83 @@ class AdapterSendTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls[0][1]["message"][0]["type"], "reply")
         self.assertEqual(calls[0][1]["message"][1]["data"]["text"], "hello")
 
+    async def test_image_only_message_is_photo_event(self):
+        bot = _make_adapter({"mode": "reverse"})
+        events = []
+
+        async def fake_cache_image(data):
+            return "/tmp/napcat-image.jpg"
+
+        async def fake_handle_message(event):
+            events.append(event)
+
+        bot._cache_incoming_image = fake_cache_image
+        bot.handle_message = fake_handle_message
+
+        await bot._handle_onebot_event(
+            {
+                "post_type": "message",
+                "message_type": "private",
+                "user_id": 10001,
+                "message_id": 42,
+                "sender": {"nickname": "alice"},
+                "message": [
+                    {
+                        "type": "image",
+                        "data": {
+                            "file": "napcat-image.jpg",
+                            "url": "https://example.invalid/napcat-image.jpg",
+                        },
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].text, "")
+        self.assertEqual(events[0].message_type, adapter.MessageType.PHOTO)
+        self.assertEqual(events[0].media_urls, ["/tmp/napcat-image.jpg"])
+        self.assertEqual(events[0].media_types, ["image/jpeg"])
+
+    async def test_image_with_text_keeps_caption_and_photo_event(self):
+        bot = _make_adapter({"mode": "reverse"})
+        events = []
+
+        async def fake_cache_image(data):
+            return "/tmp/napcat-image.png"
+
+        async def fake_handle_message(event):
+            events.append(event)
+
+        bot._cache_incoming_image = fake_cache_image
+        bot.handle_message = fake_handle_message
+
+        await bot._handle_onebot_event(
+            {
+                "post_type": "message",
+                "message_type": "private",
+                "user_id": 10001,
+                "message_id": 43,
+                "sender": {"nickname": "alice"},
+                "message": [
+                    {"type": "text", "data": {"text": "看看这个"}},
+                    {
+                        "type": "image",
+                        "data": {
+                            "file": "napcat-image.png",
+                            "url": "https://example.invalid/napcat-image.png",
+                        },
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].text, "看看这个")
+        self.assertEqual(events[0].message_type, adapter.MessageType.PHOTO)
+        self.assertEqual(events[0].media_urls, ["/tmp/napcat-image.png"])
+        self.assertEqual(events[0].media_types, ["image/png"])
+
 
 if __name__ == "__main__":
     unittest.main()
